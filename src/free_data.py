@@ -3,11 +3,14 @@ Módulo de datos en vivo usando endpoints GRATUITOS (sin API key)
 ESPN, MLB Stats API, NBA CDN, SofaScore
 Adaptable a cualquier deporte
 """
-import requests
+
 import json
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any
-from config import SPORTS_CONFIG, LIVE_ENDPOINTS
+from typing import Any, Dict, List, Optional
+
+import requests
+
+from config import LIVE_ENDPOINTS, SPORTS_CONFIG
 
 
 class FreeDataProvider:
@@ -15,10 +18,12 @@ class FreeDataProvider:
 
     def __init__(self):
         self.session = requests.Session()
-        self.session.headers.update({
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            "Accept": "application/json",
-        })
+        self.session.headers.update(
+            {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "Accept": "application/json",
+            }
+        )
 
     # ═══════════════════════════════════════════════════════════
     # ESPN API (Gratuita, sin key, todos los deportes)
@@ -39,8 +44,7 @@ class FreeDataProvider:
             date = datetime.now().strftime("%Y%m%d")
 
         url = LIVE_ENDPOINTS["espn_scoreboard"].format(
-            sport=config["espn_sport"],
-            league=config["espn_league"]
+            sport=config["espn_sport"], league=config["espn_league"]
         )
         params = {"dates": date}
 
@@ -63,22 +67,36 @@ class FreeDataProvider:
             if len(competitors) < 2:
                 continue
 
-            home = next((c for c in competitors if c.get("homeAway") == "home"), competitors[0])
-            away = next((c for c in competitors if c.get("homeAway") == "away"), competitors[1])
+            home = next(
+                (c for c in competitors if c.get("homeAway") == "home"), competitors[0]
+            )
+            away = next(
+                (c for c in competitors if c.get("homeAway") == "away"), competitors[1]
+            )
 
             home_team = home.get("team", {})
             away_team = away.get("team", {})
 
             # Records (W-L)
-            home_record = home.get("records", [{}])[0].get("summary", "0-0") if home.get("records") else "0-0"
-            away_record = away.get("records", [{}])[0].get("summary", "0-0") if away.get("records") else "0-0"
+            home_record = (
+                home.get("records", [{}])[0].get("summary", "0-0")
+                if home.get("records")
+                else "0-0"
+            )
+            away_record = (
+                away.get("records", [{}])[0].get("summary", "0-0")
+                if away.get("records")
+                else "0-0"
+            )
 
             # Score actual (si está en vivo o terminó)
             home_score = home.get("score", "0")
             away_score = away.get("score", "0")
 
             # Status
-            status = event.get("status", {}).get("type", {}).get("name", "STATUS_SCHEDULED")
+            status = (
+                event.get("status", {}).get("type", {}).get("name", "STATUS_SCHEDULED")
+            )
 
             # Odds si están disponibles
             odds_data = competition.get("odds", [{}])
@@ -105,8 +123,12 @@ class FreeDataProvider:
             if odds_info:
                 parsed["spread"] = odds_info.get("spread", None)
                 parsed["over_under"] = odds_info.get("overUnder", None)
-                parsed["home_ml"] = odds_info.get("homeTeamOdds", {}).get("moneyLine", None)
-                parsed["away_ml"] = odds_info.get("awayTeamOdds", {}).get("moneyLine", None)
+                parsed["home_ml"] = odds_info.get("homeTeamOdds", {}).get(
+                    "moneyLine", None
+                )
+                parsed["away_ml"] = odds_info.get("awayTeamOdds", {}).get(
+                    "moneyLine", None
+                )
 
             # Extraer W y L del record
             try:
@@ -136,8 +158,7 @@ class FreeDataProvider:
             return {}
 
         url = LIVE_ENDPOINTS["espn_standings"].format(
-            sport=config["espn_sport"],
-            league=config["espn_league"]
+            sport=config["espn_sport"], league=config["espn_league"]
         )
         try:
             resp = self.session.get(url, timeout=15)
@@ -171,19 +192,29 @@ class FreeDataProvider:
                 for game in date_entry.get("games", []):
                     away = game.get("teams", {}).get("away", {})
                     home = game.get("teams", {}).get("home", {})
-                    games.append({
-                        "game_id": game.get("gamePk"),
-                        "status": game.get("status", {}).get("detailedState"),
-                        "home_team": home.get("team", {}).get("name"),
-                        "away_team": away.get("team", {}).get("name"),
-                        "home_record": f"{home.get('leagueRecord', {}).get('wins', 0)}-{home.get('leagueRecord', {}).get('losses', 0)}",
-                        "away_record": f"{away.get('leagueRecord', {}).get('wins', 0)}-{away.get('leagueRecord', {}).get('losses', 0)}",
-                        "home_pitcher": home.get("probablePitcher", {}).get("fullName", "TBD"),
-                        "away_pitcher": away.get("probablePitcher", {}).get("fullName", "TBD"),
-                        "home_pitcher_era": home.get("probablePitcher", {}).get("era", "0.00"),
-                        "away_pitcher_era": away.get("probablePitcher", {}).get("era", "0.00"),
-                        "venue": game.get("venue", {}).get("name"),
-                    })
+                    games.append(
+                        {
+                            "game_id": game.get("gamePk"),
+                            "status": game.get("status", {}).get("detailedState"),
+                            "home_team": home.get("team", {}).get("name"),
+                            "away_team": away.get("team", {}).get("name"),
+                            "home_record": f"{home.get('leagueRecord', {}).get('wins', 0)}-{home.get('leagueRecord', {}).get('losses', 0)}",
+                            "away_record": f"{away.get('leagueRecord', {}).get('wins', 0)}-{away.get('leagueRecord', {}).get('losses', 0)}",
+                            "home_pitcher": home.get("probablePitcher", {}).get(
+                                "fullName", "TBD"
+                            ),
+                            "away_pitcher": away.get("probablePitcher", {}).get(
+                                "fullName", "TBD"
+                            ),
+                            "home_pitcher_era": home.get("probablePitcher", {}).get(
+                                "era", "0.00"
+                            ),
+                            "away_pitcher_era": away.get("probablePitcher", {}).get(
+                                "era", "0.00"
+                            ),
+                            "venue": game.get("venue", {}).get("name"),
+                        }
+                    )
             return games
         except Exception as e:
             print(f"[DATA] Error MLB Stats API: {e}")
@@ -214,16 +245,18 @@ class FreeDataProvider:
             data = resp.json()
             games = []
             for game in data.get("scoreboard", {}).get("games", []):
-                games.append({
-                    "game_id": game.get("gameId"),
-                    "status": game.get("gameStatusText"),
-                    "home_team": game.get("homeTeam", {}).get("teamName"),
-                    "home_score": game.get("homeTeam", {}).get("score", 0),
-                    "home_record": f"{game.get('homeTeam', {}).get('wins', 0)}-{game.get('homeTeam', {}).get('losses', 0)}",
-                    "away_team": game.get("awayTeam", {}).get("teamName"),
-                    "away_score": game.get("awayTeam", {}).get("score", 0),
-                    "away_record": f"{game.get('awayTeam', {}).get('wins', 0)}-{game.get('awayTeam', {}).get('losses', 0)}",
-                })
+                games.append(
+                    {
+                        "game_id": game.get("gameId"),
+                        "status": game.get("gameStatusText"),
+                        "home_team": game.get("homeTeam", {}).get("teamName"),
+                        "home_score": game.get("homeTeam", {}).get("score", 0),
+                        "home_record": f"{game.get('homeTeam', {}).get('wins', 0)}-{game.get('homeTeam', {}).get('losses', 0)}",
+                        "away_team": game.get("awayTeam", {}).get("teamName"),
+                        "away_score": game.get("awayTeam", {}).get("score", 0),
+                        "away_record": f"{game.get('awayTeam', {}).get('wins', 0)}-{game.get('awayTeam', {}).get('losses', 0)}",
+                    }
+                )
             return games
         except Exception as e:
             print(f"[DATA] Error NBA CDN: {e}")
@@ -233,7 +266,9 @@ class FreeDataProvider:
     # SOFASCORE API (Gratuita, fútbol mundial)
     # ═══════════════════════════════════════════════════════════
 
-    def get_sofascore_events(self, sport: str = "football", date: str = None) -> List[Dict]:
+    def get_sofascore_events(
+        self, sport: str = "football", date: str = None
+    ) -> List[Dict]:
         """Obtiene eventos de SofaScore (fútbol, basketball, etc.)"""
         if date is None:
             date = datetime.now().strftime("%Y-%m-%d")
@@ -248,17 +283,19 @@ class FreeDataProvider:
                 tournament = event.get("tournament", {})
                 home = event.get("homeTeam", {})
                 away = event.get("awayTeam", {})
-                events.append({
-                    "event_id": event.get("id"),
-                    "tournament": tournament.get("name"),
-                    "country": tournament.get("category", {}).get("name"),
-                    "home_team": home.get("name"),
-                    "away_team": away.get("name"),
-                    "start_time": event.get("startTimestamp"),
-                    "status": event.get("status", {}).get("type"),
-                    "home_score": event.get("homeScore", {}).get("current"),
-                    "away_score": event.get("awayScore", {}).get("current"),
-                })
+                events.append(
+                    {
+                        "event_id": event.get("id"),
+                        "tournament": tournament.get("name"),
+                        "country": tournament.get("category", {}).get("name"),
+                        "home_team": home.get("name"),
+                        "away_team": away.get("name"),
+                        "start_time": event.get("startTimestamp"),
+                        "status": event.get("status", {}).get("type"),
+                        "home_score": event.get("homeScore", {}).get("current"),
+                        "away_score": event.get("awayScore", {}).get("current"),
+                    }
+                )
             return events
         except Exception as e:
             print(f"[DATA] Error SofaScore: {e}")
@@ -299,14 +336,16 @@ class FreeDataProvider:
             nba_games = self.get_nba_today()
             if nba_games and not games:
                 for g in nba_games:
-                    games.append({
-                        "sport": "nba",
-                        "home_team": g["home_team"],
-                        "away_team": g["away_team"],
-                        "home_record": g["home_record"],
-                        "away_record": g["away_record"],
-                        "status": g["status"],
-                    })
+                    games.append(
+                        {
+                            "sport": "nba",
+                            "home_team": g["home_team"],
+                            "away_team": g["away_team"],
+                            "home_record": g["home_record"],
+                            "away_record": g["away_record"],
+                            "status": g["status"],
+                        }
+                    )
 
         elif sport_key in ["soccer", "mls", "liga_mx"]:
             sofa_events = self.get_sofascore_events("football")
@@ -314,10 +353,20 @@ class FreeDataProvider:
                 print(f"[DATA] SofaScore: {len(sofa_events)} eventos de fútbol")
 
         # Filtrar solo partidos programados (no finalizados)
-        scheduled = [g for g in games if g.get("status") in [
-            "STATUS_SCHEDULED", "STATUS_IN_PROGRESS", "Scheduled",
-            "Pre-Game", "Warmup", None, "notstarted"
-        ]]
+        scheduled = [
+            g
+            for g in games
+            if g.get("status")
+            in [
+                "STATUS_SCHEDULED",
+                "STATUS_IN_PROGRESS",
+                "Scheduled",
+                "Pre-Game",
+                "Warmup",
+                None,
+                "notstarted",
+            ]
+        ]
 
         return scheduled if scheduled else games
 

@@ -3,15 +3,17 @@ Sports Prediction Bot - Main Orchestrator
 Ejecuta el pipeline completo: datos → predicción → filtro → telegram
 Adaptable a cualquier deporte con datos reales en vivo
 """
-import sys
+
 import json
+import sys
 from datetime import datetime
-from src.free_data import FreeDataProvider
-from src.scraper import LiveScraper
-from src.predictor import SportPredictor
-from src.telegram_bot import TelegramSender
-from src.history import HistoryManager
+
 from config import SPORTS_CONFIG
+from src.free_data import FreeDataProvider
+from src.history import HistoryManager
+from src.predictor import SportPredictor
+from src.scraper import LiveScraper
+from src.telegram_bot import TelegramSender
 
 
 def run_predictions(sports: list = None):
@@ -58,8 +60,12 @@ def run_predictions(sports: list = None):
                 # Merge odds scrapeadas con datos de ESPN
                 for game in games:
                     for odds in scraped_odds:
-                        if (odds.get("home", "").lower() in game.get("home_team", "").lower() or
-                                game.get("home_team", "").lower() in odds.get("home", "").lower()):
+                        if (
+                            odds.get("home", "").lower()
+                            in game.get("home_team", "").lower()
+                            or game.get("home_team", "").lower()
+                            in odds.get("home", "").lower()
+                        ):
                             if not game.get("home_ml") and odds.get("odds_home"):
                                 game["home_ml"] = self._decimal_to_ml(odds["odds_home"])
                                 game["away_ml"] = self._decimal_to_ml(odds["odds_away"])
@@ -117,7 +123,9 @@ def run_predictions(sports: list = None):
     print(f"\n{'═' * 60}")
     print(f"  ✅ PIPELINE COMPLETADO")
     for sport, info in all_predictions.items():
-        print(f"     {sport}: {info['games_found']} juegos, {info['picks_generated']} picks")
+        print(
+            f"     {sport}: {info['games_found']} juegos, {info['picks_generated']} picks"
+        )
     print(f"{'═' * 60}\n")
 
     return all_predictions
@@ -146,7 +154,9 @@ def check_yesterday_results(sports: list = None):
     if all_results:
         summary = history.check_results(all_results)
         telegram.send_results_update(summary)
-        print(f"  📊 W: {summary['wins']} | L: {summary['losses']} | P/L: {summary['pnl']}")
+        print(
+            f"  📊 W: {summary['wins']} | L: {summary['losses']} | P/L: {summary['pnl']}"
+        )
     else:
         print("  ❌ No se pudieron obtener resultados de ayer")
 

@@ -2,11 +2,14 @@
 Scraper de datos en vivo usando ScraperAPI
 Obtiene odds reales de múltiples fuentes web
 """
-import requests
-import re
+
 import json
+import re
 import time
 from typing import Dict, List, Optional
+
+import requests
+
 from config import SCRAPER_API_KEY
 
 
@@ -57,7 +60,9 @@ class LiveScraper:
         matches = self._parse_flashscore(html)
         return matches
 
-    def get_odds_oddsportal(self, sport: str = "soccer", league: str = "") -> List[Dict]:
+    def get_odds_oddsportal(
+        self, sport: str = "soccer", league: str = ""
+    ) -> List[Dict]:
         """Scrape odds de OddsPortal"""
         sport_map = {
             "soccer": "soccer",
@@ -141,10 +146,12 @@ class LiveScraper:
         score_pattern = r'class="event__score[^"]*"[^>]*>([^<]+)'
         found = re.findall(score_pattern, html)
         for i in range(0, len(found) - 1, 2):
-            scores.append({
-                "home_score": found[i].strip(),
-                "away_score": found[i + 1].strip(),
-            })
+            scores.append(
+                {
+                    "home_score": found[i].strip(),
+                    "away_score": found[i + 1].strip(),
+                }
+            )
         return scores
 
     def scrape_custom_url(self, url: str) -> Optional[str]:

@@ -2,11 +2,13 @@
 Gestión de historial de predicciones y aprendizaje
 Guarda picks, verifica resultados, calcula PnL
 """
+
 import json
 import os
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
-from config import HISTORY_FILE, DAILY_PICKS_FILE
+
+from config import DAILY_PICKS_FILE, HISTORY_FILE
 
 
 class HistoryManager:
@@ -21,20 +23,23 @@ class HistoryManager:
         """Crea archivos y directorios si no existen"""
         os.makedirs(os.path.dirname(self.history_file), exist_ok=True)
         if not os.path.exists(self.history_file):
-            self._save_json(self.history_file, {
-                "predictions": [],
-                "stats": {
-                    "total_picks": 0,
-                    "wins": 0,
-                    "losses": 0,
-                    "pending": 0,
-                    "total_pnl": 0.0,
-                    "bankroll": 1000.0,
-                    "best_streak": 0,
-                    "current_streak": 0,
+            self._save_json(
+                self.history_file,
+                {
+                    "predictions": [],
+                    "stats": {
+                        "total_picks": 0,
+                        "wins": 0,
+                        "losses": 0,
+                        "pending": 0,
+                        "total_pnl": 0.0,
+                        "bankroll": 1000.0,
+                        "best_streak": 0,
+                        "current_streak": 0,
+                    },
+                    "daily_log": [],
                 },
-                "daily_log": [],
-            })
+            )
         if not os.path.exists(self.daily_file):
             self._save_json(self.daily_file, {"date": "", "picks": []})
 
@@ -70,24 +75,28 @@ class HistoryManager:
             for pick in pred.get("picks", []):
                 key = f"{pred['home_team']}_{pick['pick']}"
                 if key not in existing_keys:
-                    daily.setdefault("picks", []).append({
-                        "timestamp": datetime.now().isoformat(),
-                        "home_team": pred["home_team"],
-                        "away_team": pred["away_team"],
-                        "sport": pred.get("sport"),
-                        **pick,
-                        "result": "pending",
-                    })
+                    daily.setdefault("picks", []).append(
+                        {
+                            "timestamp": datetime.now().isoformat(),
+                            "home_team": pred["home_team"],
+                            "away_team": pred["away_team"],
+                            "sport": pred.get("sport"),
+                            **pick,
+                            "result": "pending",
+                        }
+                    )
                     existing_keys.add(key)
 
         if parlay and parlay.get("legs"):
-            daily.setdefault("parlays", []).append({
-                "timestamp": datetime.now().isoformat(),
-                "legs": parlay["legs"],
-                "odds": parlay["odds"],
-                "probability": parlay["probability"],
-                "result": "pending",
-            })
+            daily.setdefault("parlays", []).append(
+                {
+                    "timestamp": datetime.now().isoformat(),
+                    "legs": parlay["legs"],
+                    "odds": parlay["odds"],
+                    "probability": parlay["probability"],
+                    "result": "pending",
+                }
+            )
 
         self._save_json(self.daily_file, daily)
         print(f"[HISTORY] Guardados {len(daily['picks'])} picks para {today}")
@@ -112,8 +121,9 @@ class HistoryManager:
             # Buscar resultado del partido
             matched_result = None
             for result in results:
-                if (pick.get("home_team") in result.get("home_team", "") or
-                        result.get("home_team", "") in pick.get("home_team", "")):
+                if pick.get("home_team") in result.get("home_team", "") or result.get(
+                    "home_team", ""
+                ) in pick.get("home_team", ""):
                     matched_result = result
                     break
 
@@ -154,13 +164,15 @@ class HistoryManager:
 
         # Guardar al historial
         history["stats"] = stats
-        history.setdefault("daily_log", []).append({
-            "date": yesterday,
-            "wins": wins,
-            "losses": losses,
-            "pnl": round(pnl, 2),
-            "win_rate": round(win_rate, 1),
-        })
+        history.setdefault("daily_log", []).append(
+            {
+                "date": yesterday,
+                "wins": wins,
+                "losses": losses,
+                "pnl": round(pnl, 2),
+                "win_rate": round(win_rate, 1),
+            }
+        )
 
         # Mover picks al historial
         history.setdefault("predictions", []).extend(daily.get("picks", []))

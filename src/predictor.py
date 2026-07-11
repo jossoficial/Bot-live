@@ -3,13 +3,14 @@ Motor de predicción multi-deporte
 Poisson + EV + Kelly Criterion + Filtro de confianza
 Adaptable a cualquier deporte con datos reales
 """
+
+from typing import Dict, List, Optional, Tuple
+
 import numpy as np
 from scipy.stats import poisson
-from typing import Dict, List, Tuple, Optional
-from config import (
-    SPORTS_CONFIG, MIN_EDGE_PCT, KELLY_FRACTION,
-    MIN_CONFIDENCE, MAX_BET_SIZE_PCT, HOME_ADVANTAGE
-)
+
+from config import (HOME_ADVANTAGE, KELLY_FRACTION, MAX_BET_SIZE_PCT,
+                    MIN_CONFIDENCE, MIN_EDGE_PCT, SPORTS_CONFIG)
 
 
 class SportPredictor:
@@ -31,7 +32,7 @@ class SportPredictor:
         away_strength = self._calculate_strength(game, "away")
 
         # Ajustar por ventaja local
-        home_strength *= (1 + HOME_ADVANTAGE)
+        home_strength *= 1 + HOME_ADVANTAGE
 
         # Calcular lambdas (scoring esperado)
         total_strength = home_strength + away_strength
@@ -61,6 +62,7 @@ class SportPredictor:
 
         # Score más probable
         from collections import Counter
+
         score_pairs = list(zip(home_scores, away_scores))
         most_common_score = Counter(score_pairs).most_common(1)[0]
 
@@ -70,36 +72,44 @@ class SportPredictor:
         # Moneyline
         if game.get("home_ml"):
             home_odds = self._ml_to_decimal(game["home_ml"])
-            away_odds = self._ml_to_decimal(game["away_ml"]) if game.get("away_ml") else None
+            away_odds = (
+                self._ml_to_decimal(game["away_ml"]) if game.get("away_ml") else None
+            )
 
             home_ev = self._calc_ev(home_win_prob, home_odds)
             if home_ev > MIN_EDGE_PCT / 100:
                 kelly = self._kelly(home_win_prob, home_odds)
-                picks.append({
-                    "market": "moneyline",
-                    "pick": game["home_team"],
-                    "odds": home_odds,
-                    "ml_odds": game["home_ml"],
-                    "probability": round(home_win_prob * 100, 1),
-                    "ev": round(home_ev * 100, 2),
-                    "kelly_pct": round(kelly * 100, 2),
-                    "confidence": self._confidence_level(home_win_prob, home_ev),
-                })
+                picks.append(
+                    {
+                        "market": "moneyline",
+                        "pick": game["home_team"],
+                        "odds": home_odds,
+                        "ml_odds": game["home_ml"],
+                        "probability": round(home_win_prob * 100, 1),
+                        "ev": round(home_ev * 100, 2),
+                        "kelly_pct": round(kelly * 100, 2),
+                        "confidence": self._confidence_level(home_win_prob, home_ev),
+                    }
+                )
 
             if away_odds:
                 away_ev = self._calc_ev(away_win_prob, away_odds)
                 if away_ev > MIN_EDGE_PCT / 100:
                     kelly = self._kelly(away_win_prob, away_odds)
-                    picks.append({
-                        "market": "moneyline",
-                        "pick": game["away_team"],
-                        "odds": away_odds,
-                        "ml_odds": game["away_ml"],
-                        "probability": round(away_win_prob * 100, 1),
-                        "ev": round(away_ev * 100, 2),
-                        "kelly_pct": round(kelly * 100, 2),
-                        "confidence": self._confidence_level(away_win_prob, away_ev),
-                    })
+                    picks.append(
+                        {
+                            "market": "moneyline",
+                            "pick": game["away_team"],
+                            "odds": away_odds,
+                            "ml_odds": game["away_ml"],
+                            "probability": round(away_win_prob * 100, 1),
+                            "ev": round(away_ev * 100, 2),
+                            "kelly_pct": round(kelly * 100, 2),
+                            "confidence": self._confidence_level(
+                                away_win_prob, away_ev
+                            ),
+                        }
+                    )
 
         # Over/Under
         if game.get("over_under"):
@@ -111,25 +121,29 @@ class SportPredictor:
             under_ev = self._calc_ev(under_sim, 1.91)
 
             if over_ev > MIN_EDGE_PCT / 100:
-                picks.append({
-                    "market": "total",
-                    "pick": f"Over {ou_line}",
-                    "odds": 1.91,
-                    "probability": round(over_sim * 100, 1),
-                    "ev": round(over_ev * 100, 2),
-                    "kelly_pct": round(self._kelly(over_sim, 1.91) * 100, 2),
-                    "confidence": self._confidence_level(over_sim, over_ev),
-                })
+                picks.append(
+                    {
+                        "market": "total",
+                        "pick": f"Over {ou_line}",
+                        "odds": 1.91,
+                        "probability": round(over_sim * 100, 1),
+                        "ev": round(over_ev * 100, 2),
+                        "kelly_pct": round(self._kelly(over_sim, 1.91) * 100, 2),
+                        "confidence": self._confidence_level(over_sim, over_ev),
+                    }
+                )
             if under_ev > MIN_EDGE_PCT / 100:
-                picks.append({
-                    "market": "total",
-                    "pick": f"Under {ou_line}",
-                    "odds": 1.91,
-                    "probability": round(under_sim * 100, 1),
-                    "ev": round(under_ev * 100, 2),
-                    "kelly_pct": round(self._kelly(under_sim, 1.91) * 100, 2),
-                    "confidence": self._confidence_level(under_sim, under_ev),
-                })
+                picks.append(
+                    {
+                        "market": "total",
+                        "pick": f"Under {ou_line}",
+                        "odds": 1.91,
+                        "probability": round(under_sim * 100, 1),
+                        "ev": round(under_ev * 100, 2),
+                        "kelly_pct": round(self._kelly(under_sim, 1.91) * 100, 2),
+                        "confidence": self._confidence_level(under_sim, under_ev),
+                    }
+                )
 
         # Spread
         if game.get("spread"):
@@ -138,15 +152,17 @@ class SportPredictor:
                 home_cover = np.mean((home_scores - away_scores) > abs(spread_val))
                 spread_ev = self._calc_ev(home_cover, 1.91)
                 if spread_ev > MIN_EDGE_PCT / 100:
-                    picks.append({
-                        "market": "spread",
-                        "pick": f"{game['home_team']} {spread_val}",
-                        "odds": 1.91,
-                        "probability": round(home_cover * 100, 1),
-                        "ev": round(spread_ev * 100, 2),
-                        "kelly_pct": round(self._kelly(home_cover, 1.91) * 100, 2),
-                        "confidence": self._confidence_level(home_cover, spread_ev),
-                    })
+                    picks.append(
+                        {
+                            "market": "spread",
+                            "pick": f"{game['home_team']} {spread_val}",
+                            "odds": 1.91,
+                            "probability": round(home_cover * 100, 1),
+                            "ev": round(spread_ev * 100, 2),
+                            "kelly_pct": round(self._kelly(home_cover, 1.91) * 100, 2),
+                            "confidence": self._confidence_level(home_cover, spread_ev),
+                        }
+                    )
             except (ValueError, TypeError):
                 pass
 
@@ -176,7 +192,7 @@ class SportPredictor:
                 "away_strength": round(away_strength, 3),
                 "home_record": game.get("home_record"),
                 "away_record": game.get("away_record"),
-            }
+            },
         }
         return prediction
 
@@ -194,7 +210,9 @@ class SportPredictor:
             try:
                 era_val = float(era)
                 # ERA baja = mejor, normalizar inversamente
-                era_factor = max(0, 1 - (era_val / 9.0))  # ERA 0=1.0, ERA 4.5=0.5, ERA 9=0
+                era_factor = max(
+                    0, 1 - (era_val / 9.0)
+                )  # ERA 0=1.0, ERA 4.5=0.5, ERA 9=0
                 strength = strength * 0.6 + era_factor * 0.4
             except (ValueError, TypeError):
                 pass
@@ -252,7 +270,9 @@ class SportPredictor:
         else:
             return "LOW"
 
-    def generate_parlay(self, predictions: List[Dict], target_odds: float = 5.0) -> Dict:
+    def generate_parlay(
+        self, predictions: List[Dict], target_odds: float = 5.0
+    ) -> Dict:
         """
         Genera el mejor parlay posible con las predicciones del día.
         target_odds: cuota objetivo del parlay
@@ -262,11 +282,13 @@ class SportPredictor:
         for pred in predictions:
             for pick in pred.get("picks", []):
                 if pick["confidence"] in ["HIGH", "MEDIUM"]:
-                    all_picks.append({
-                        **pick,
-                        "home_team": pred["home_team"],
-                        "away_team": pred["away_team"],
-                    })
+                    all_picks.append(
+                        {
+                            **pick,
+                            "home_team": pred["home_team"],
+                            "away_team": pred["away_team"],
+                        }
+                    )
 
         # Ordenar por EV descendente
         all_picks.sort(key=lambda x: x["ev"], reverse=True)
@@ -289,7 +311,7 @@ class SportPredictor:
         # Probabilidad conjunta (independencia asumida)
         joint_prob = 1.0
         for leg in parlay_legs:
-            joint_prob *= (leg["probability"] / 100)
+            joint_prob *= leg["probability"] / 100
 
         parlay_ev = (joint_prob * cumulative_odds) - 1
 

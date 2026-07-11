@@ -2,8 +2,11 @@
 Módulo de envío de picks a Telegram
 Formatea y envía predicciones de cualquier deporte
 """
-import requests
+
 from typing import Dict, List
+
+import requests
+
 from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 
 
@@ -59,9 +62,7 @@ class TelegramSender:
             if not pred.get("picks"):
                 continue
 
-            lines.append(
-                f"⚔️ <b>{pred['away_team']} @ {pred['home_team']}</b>"
-            )
+            lines.append(f"⚔️ <b>{pred['away_team']} @ {pred['home_team']}</b>")
             lines.append(
                 f"   📊 Prob: H {pred['probabilities']['home_win']}% | "
                 f"D {pred['probabilities']['draw']}% | "
@@ -71,9 +72,7 @@ class TelegramSender:
 
             for pick in pred["picks"]:
                 emoji = emoji_map.get(pick["confidence"], "")
-                lines.append(
-                    f"   {emoji} <b>{pick['pick']}</b> ({pick['market']})"
-                )
+                lines.append(f"   {emoji} <b>{pick['pick']}</b> ({pick['market']})")
                 lines.append(
                     f"      Cuota: {pick['odds']:.2f} | "
                     f"EV: +{pick['ev']}% | "

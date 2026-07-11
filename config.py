@@ -2,6 +2,7 @@
 Configuración centralizada del Sports Prediction Bot
 Adaptable a cualquier deporte con datos reales en vivo
 """
+
 import os
 
 # ═══════════════════════════════════════════════════════════════
